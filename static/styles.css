@@ -1,0 +1,110 @@
+body {
+    font-family: Arial, sans-serif;
+    background-image: url('—Pngtree—energy saving and emission reduction_1096717.jpg');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.charts-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.chart-container {
+    width: 100%;
+    max-width: 1200px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .charts-section {
+        flex-direction: column;
+    }
+
+    .chart-container {
+        width: 100%;
+    }
+}
+
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.form-group {
+    display: block;
+    padding-left: 20%;
+    font-size: large;
+    margin-bottom: 15px;
+}
+
+label {
+    color: white;
+    font-weight: bold;
+    padding-left: 20%;
+}
+
+button {
+    font-size: large;
+    display: block;
+    margin: 20px auto;
+    height: 50%;
+    width: 50%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+.result {
+    color: white;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.big-number {
+    font-size: 48px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stats {
+    margin-top: 20px;
+}
+/* Footer styling */
+footer {
+    background-color: #202020;
+    color: rgb(255, 255, 255);
+    text-align: center;
+    padding: 10px 0;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    font-size: 14px;
+}
+
+footer p {
+    margin: 0;
+}

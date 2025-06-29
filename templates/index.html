@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electricity Demand Prediction</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #111111;
+            color: #9c9c9c;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard-container {
+            max-width: 1680px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #2b2b2b;
+            box-shadow: 0 4px 10px rgba(182, 182, 182, 0.1);
+            border-radius: 10px;
+        }
+
+        header {
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .form-section, .result, .charts-section {
+            margin: 20px 0;
+        }
+
+        .form-section label {
+            font-weight: bold;
+        }
+
+        .form-section button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .form-section button:hover {
+            background-color: #0056b3;
+        }
+
+        .big-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #007bff;
+            margin: 20px 0;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 span {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .chart-container canvas {
+            max-width: 100%;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #cacaca;
+        }
+
+        footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1><i class="fas fa-bolt"></i> Electricity Demand Prediction</h1>
+        </header>
+
+        <section class="form-section">
+            <form id="predictionForm" autocomplete="off" class="row g-3">
+                <div class="col-md-6">
+                    <label for="date" class="form-label">Select Date</label>
+                    <input type="text" id="date" name="date" class="form-control" autocomplete="off" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="hour" class="form-label">Select Hour (0-23)</label>
+                    <input type="number" id="hour" name="hour" class="form-control" min="0" max="23" required>
+                </div>
+
+                <div class="col-12 text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">Predict Demand</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="result">
+            <h2>Initial Predicted Demand: <span id="predictedDemand">-</span> MW</h2>
+            <h2>Is Active Hour: <span id="isActiveHour">-</span></h2>
+            <h2>Is Holiday: <span id="isHoliday">-</span></h2>
+            <h2>Holiday Name: <span id="holidayName">-</span></h2>
+            <div class="big-number" id="adjustedDemand">- MW</div>
+            <h2>Season: <span id="season">-</span></h2>
+            <h2>Peak Demand: <span id="peakDemand">-</span> MW at Hour: <span id="peakHour">-</span></h2>
+            <h2>Prediction for: <span id="predictionDate">-</span> at Hour: <span id="predictionHour">-</span></h2><br><br>
+        </section>
+
+        <section class="charts-section row">
+            <div class="chart-container col-md-4">
+                <canvas id="weatherChart"></canvas>
+            </div>
+            <div class="chart-container col-md-4">
+                <canvas id="demandChart"></canvas>
+            </div>
+            <div class="chart-container col-md-4">
+                <canvas id="weather24Chart"></canvas>
+            </div>
+        </section>
+        <section id="event-table-container">
+            <h2>Editable Local Events</h2>
+            <table class="table table-bordered table-sm" id="eventTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Start Hour</th>
+                        <th>End Hour</th>
+                        <th>Expected Participants</th>
+                        <th>Event Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button class="btn btn-success" id="addRow">Add Row</button>
+            <button class="btn btn-primary" id="saveEvents">Save Events</button>
+        </section>
+    </div>
+
+    <footer>
+        <p>&copy;  Electricity Demand Prediction<a href="#"></a></p>
+    </footer>
+
+    <script>
+        $(function() {
+            $("#date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                changeMonth: true,
+                changeYear: true,
+                yearRange: "2014:2044"
+            });
+
+            const weatherChart = new Chart($("#weatherChart"), {
+                type: 'bar',
+                data: {
+                    labels: ['Temperature', 'Humidity', 'Wind Speed', 'Rain'],
+                    datasets: [{
+                        label: 'Weather Factors',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)', 'rgba(75, 192, 192, 0.8)', 'rgba(153, 102, 255, 0.8)'],
+                        borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            const demandChart = new Chart($("#demandChart"), {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                    datasets: [{
+                        label: '24-Hour Demand',
+                        data: Array(24).fill(0),
+                        backgroundColor: 'rgba(0, 0, 0, 1)',
+                        borderColor: 'rgba(0, 0, 0, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            const weather24Chart = new Chart($("#weather24Chart"), {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                    datasets: [{
+                        label: 'Temperature',
+                        data: Array(24).fill(0),
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Humidity',
+                        data: Array(24).fill(0),
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Wind Speed',
+                        data: Array(24).fill(0),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Rain/Shower',
+                        data: Array(24).fill(0),
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            $("#predictionForm").on("submit", function(event) {
+                event.preventDefault();
+                
+                const formData = $(this).serialize();
+                
+                $.post("/predict", formData, function(data) {
+                    if (data.error) {
+                        alert("Error: " + data.error);
+                        return;
+                    }
+
+                    $('#predictedDemand').text(data.predicted_demand.toFixed(2));
+                    $('#adjustedDemand').text(data.adjusted_demand.toFixed(2) + " MW");
+                    $('#isActiveHour').text(data.is_active_hour ? 'Yes' : 'No');
+                    $('#isHoliday').text(data.holiday ? 'Yes' : 'No');
+                    $('#holidayName').text(data.holiday_name || '-');
+                    $('#season').text(data.season);
+                    $('#peakDemand').text(data.peak_demand.toFixed(2));
+                    $('#peakHour').text(data.peak_hour);
+                    $('#predictionDate').text(data.prediction_date);
+                    $('#predictionHour').text(data.prediction_hour);
+                    $('#eventName').text(data.event_names);
+
+                    weatherChart.data.datasets[0].data = [
+                        data.temperature,
+                        data.humidity,
+                        data.wind_speed,
+                        data.rain
+                    ];
+                    weatherChart.update();
+
+                    demandChart.data.datasets[0].data = data.demand_24_hours.map(d => d.toFixed(2));
+                    demandChart.update();
+
+                    weather24Chart.data.datasets[0].data = data.Temperature_24_hours.map(temp => temp.toFixed(2));
+                    weather24Chart.data.datasets[1].data = data.Humidity_24_hours.map(hum => hum.toFixed(2));
+                    weather24Chart.data.datasets[2].data = data.Wind_Speed_24_hours.map(ws => ws.toFixed(2));
+                    weather24Chart.data.datasets[3].data = data.rain_shower_24_hours.map(rain => rain.toFixed(2));
+                    weather24Chart.update();
+                });
+            });
+            $(function() {
+            $("#date").datepicker({ dateFormat: "yy-mm-dd" });
+            loadEvents();
+        });
+
+        function loadEvents() {
+            $.get('/load_events', function(events) {
+                $('#eventTable tbody').empty();
+                events.forEach(e => addEventRow(e.date, e.hour, e.intensity, e.event_name));
+            });
+        }
+
+        $(function () {
+            $(".date-input").datepicker({
+                dateFormat: 'yy-mm-dd',
+                changeMonth: true,
+                changeYear: true,
+                yearRange: "2014:2044"
+            });
+
+            $.get('/load_events', function (events) {
+                events.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+                renderTable(events);
+            });
+        });
+
+        function renderTable(events) {
+            const tbody = $("#eventTable tbody");
+            tbody.empty();
+            events.forEach(event => {
+                const row = `<tr>
+                    <td><input type="text" class="form-control date-input" value="${event.Date || ''}"></td>
+                    <td><input type="number" class="form-control start-hour" min="0" max="23" value="${event.Start_Hour || 0}"></td>
+                    <td><input type="number" class="form-control end-hour" min="0" max="23" value="${event.End_Hour || 0}"></td>
+                    <td>
+                        <select class="form-control">
+                            <option ${event.Intensity === 'low' ? 'selected' : ''}>low</option>
+                            <option ${event.Intensity === 'medium' ? 'selected' : ''}>medium</option>
+                            <option ${event.Intensity === 'high' ? 'selected' : ''}>high</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control" value="${event.Event_Name || ''}"></td>
+                    <td><button class="btn btn-danger btn-sm deleteRow">Delete</button></td>
+                </tr>`;
+                //row.find("select").val(event.Intensity);
+                tbody.append(row);
+            });
+            $(".date-input").datepicker({
+                dateFormat: 'yy-mm-dd',
+                changeMonth: true,
+                changeYear: true,
+                yearRange: "2014:2044"
+            });
+            $(".deleteRow").click(function () {
+                $(this).closest("tr").remove();
+            });
+        }
+
+        function validateEvents(events) {
+            for (const e of events) {
+                if (parseInt(e.Start_Hour) > parseInt(e.End_Hour)) {
+                    alert(`End hour must be ≥ start hour for event on ${e.Date}`);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        $("#addRow").click(() => {
+            const data = getEventData();
+            data.push({});
+            renderTable(data);
+        });
+        $("#saveEvents").click(() => {
+            const data = getEventData();
+            if (!validateEvents(data)) return;
+
+            $.ajax({
+                url: "/save_events",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: () => alert("Events saved successfully"),
+                error: () => alert("Failed to save")
+            });
+        });
+
+        function getEventData() {
+            return Array.from($("#eventTable tbody tr")).map(row => ({
+                Date: $(row).find("td:eq(0) input").val(),
+                Start_Hour: $(row).find("td:eq(1) input").val(),
+                End_Hour: $(row).find("td:eq(2) input").val(),
+                Intensity: $(row).find("td:eq(3) select").val(),
+                Event_Name: $(row).find("td:eq(4) input").val()
+            }));
+        }
+
+        });
+    </script>
+</body>
+</html>
